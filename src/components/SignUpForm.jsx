@@ -1,76 +1,80 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as Yup from 'yup';
-import axios from 'axios';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import './SignUpForm.css';
+import React, { useState } from 'react'; 
+import { useForm } from 'react-hook-form'; 
+import { yupResolver } from '@hookform/resolvers/yup'; 
+import * as Yup from 'yup'; 
+import { toast, ToastContainer } from 'react-toastify'; 
+import 'react-toastify/dist/ReactToastify.css'; 
+import axios from 'axios'; 
+import { useNavigate } from 'react-router-dom'; 
+import './SignUpForm.css'; 
 
 const SignUpForm = () => {
+    const [showPassword, setShowPassword] = useState(false); //  управління видимістю пароля
+    const navigate = useNavigate(); // useNavigate для перенаправлення
 
-  const validationSchema = Yup.object().shape({
-    email: Yup.string()
-      .required('Email is required')
-      .email('Email is invalid'),
-    password: Yup.string()
-      .required('Password is required')
-      .min(6, 'Password must be at least 6 characters'),
-    repeatPassword: Yup.string()
-      .required('Repeat Password is required')
-      .oneOf([Yup.ref('password')], 'Passwords must match'),
-  });
+    const validationSchema = Yup.object().shape({
+        email: Yup.string().email('Email is invalid').required('Email is required'),
+        password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+        repeatPassword: Yup.string()
+            .oneOf([Yup.ref('password')], 'Passwords must match')
+            .required('Repeat Password is required')
+    });
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: yupResolver(validationSchema), 
-  });
+    const {
+        register,
+        handleSubmit, 
+        formState: { errors } 
+    } = useForm({
+        resolver: yupResolver(validationSchema) 
+    });
 
-  const onSubmit = async (data) => {
-    try {
-      // Відправка POST-запиту на backend для реєстрації користувача
-      const response = await axios.post('/api/register', data);
+    const onSubmit = async (data) => {
+        try {
+            const response = await axios.post('/api/register', data); 
+            toast.success('Registration successful!');
+            // Зберігання токена та перенаправлення на сторінку TrackerPage
+            localStorage.setItem('token', response.data.token);
+            navigate('/tracker');
+        } catch (error) {
+            toast.error('There was an error during registration. Please try again.');
+        }
+    };
 
-      if (response.status === 200) {
-        localStorage.setItem('token', response.data.token); // Збереження токена в localStorage
-        window.location.href = '/tracker'; // Перенаправлення на сторінку TrackerPage
-      }
-    } catch (error) {
-      toast.error(error.response?.data.message || 'An error occurred');
-    }
-  };
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword); // Перемикання showPassword
+    };
 
-  return (
-    <div className="signup-container">
-      <h2>Sign Up</h2>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div>
-          <label>Email</label>
-          <input type="email" {...register('email')} />
-          {errors.email && <p>{errors.email.message}</p>} 
+    return (
+        <div className="sign-up-container">
+            <form onSubmit={handleSubmit(onSubmit)}>
+                <h2>Sign Up</h2>
+                <div className="input-container">
+                    <label>Email</label>
+                    <input type="email" placeholder="Enter your email" {...register('email')} />
+                    {errors.email && <p>{errors.email.message}</p>}
+                </div>
+                <div className="input-container">
+                    <label>Password</label>
+                    <input type={showPassword ? "text" : "password"} placeholder="Enter your password" {...register('password')} />
+                    <span className="toggle-password" onClick={togglePasswordVisibility}>
+                        {showPassword ? '👁️' : '👁️'}
+                    </span>
+                    {errors.password && <p>{errors.password.message}</p>}
+                </div>
+                <div className="input-container">
+                    <label>Repeat password</label>
+                    <input type={showPassword ? "text" : "password"} placeholder="Repeat password" {...register('repeatPassword')} />
+                    <span className="toggle-password" onClick={togglePasswordVisibility}>
+                        {showPassword ? '👁️' : '👁️'}
+                    </span>
+                    {errors.repeatPassword && <p>{errors.repeatPassword.message}</p>}
+                </div>
+                <button type="submit">Sign Up</button>
+                <p>Already have an account? <a href="/signin">Sign In</a></p>
+            </form>
+            <ToastContainer />
         </div>
-        
-        <div>
-          <label>Password</label>
-          <input type="password" {...register('password')} />
-          {errors.password && <p>{errors.password.message}</p>} 
-        </div>
-
-        <div>
-          <label>Repeat Password</label>
-          <input type="password" {...register('repeatPassword')} />
-          {errors.repeatPassword && <p>{errors.repeatPassword.message}</p>} 
-        </div>
-
-        <button type="submit">Sign Up</button>
-      </form>
-
-      <ToastContainer />
-    </div>
-  );
+    );
 };
 
 export default SignUpForm;
